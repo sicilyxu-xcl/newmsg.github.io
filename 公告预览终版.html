@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>内容预览系统</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 0 20px;
+            background-color: #f8f9fa;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+        }
+
+        .input-section {
+            background: #fff;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .preview-section {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            padding: 25px;
+            border-radius: 10px;
+            transform: scale(0.7);
+            transform-origin: top left;
+            width: 140%;
+            min-height: 600px;
+            position: relative;
+        }
+
+        .preview-section h2 {
+            color: #1890ff;
+            font-size: 24px;
+            margin-bottom: 25px;
+            font-weight: normal;
+        }
+
+        #previewTitle {
+            font-size: 24px;
+            margin-bottom: 15px;
+            color: #2d3436;
+            font-weight: normal;
+        }
+
+        .preview-content {
+            font-size: 20px;
+            line-height: 1.6;
+            color: #555;
+            width: 498.75px;
+            word-wrap: break-word;
+            overflow-wrap: anywhere;
+            hyphens: auto;
+        }
+
+        #previewImage {
+            width: 498.75px;
+            height: 199.5px;
+            transform-origin: top left;
+            margin: 15px 0; 
+            object-fit: contain;
+            background: #f8f9fa;
+            border: 2px dashed #e0e0e0;
+        }
+
+        .paragraph {
+            margin-bottom: 0.5em;
+            word-break: break-word;
+        }
+
+        .divider {
+            border-top: 1px solid #e0e0e0;
+            margin: 20px 0;
+        }
+
+        .detail-link {
+            color: #1890ff;
+            text-decoration: none;
+            display: block;
+            margin: 15px 0;
+            font-size: 20px;
+            line-height: 1.6;
+        }
+
+        .preview-notice {
+            position: absolute;
+            bottom: 20px;
+            color: #ff0000;
+            font-size: 12px;
+            font-style: italic;
+            margin-top: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2d3436;
+        }
+
+        input[type="text"], 
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: Arial, sans-serif;
+        }
+
+        .error-message {
+            color: #e74c3c;
+            font-size: 12px;
+            margin-top: 5px;
+            display: none;
+        }
+
+        /* 新增提示文字样式 */
+        .hint-text {
+            color: #95a5a6;
+            font-size: 12px;
+            font-weight: normal;
+            margin-left: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="input-section">
+            <h2>创建</h2>
+            <div class="form-group">
+                <label for="titleInput">*标题</label>
+                <input type="text" id="titleInput" placeholder="请输入标题" maxlength="50">
+            </div>
+            <div class="form-group">
+                <label for="imageUpload">*封面图片（750×300）</label>
+                <input type="file" id="imageUpload" accept="image/*">
+                <div class="error-message" id="imageError"></div>
+            </div>
+            <div class="form-group">
+                <label for="contentInput">简介</label>
+                <textarea id="contentInput" rows="8" placeholder="输入内容（每一段落不超过90个字符）"></textarea>
+                <div class="error-message" id="textError"></div>
+            </div>
+            <!-- 新增荧光链接输入框 -->
+            <div class="form-group">
+                <label>*链接 <span class="hint-text">（此荧光链接为详情页面，仅支持复星通内查看）</span></label>
+                <input type="text" id="fluorescentLink" placeholder="请输入荧光链接">
+            </div>
+        </div>
+
+        <div class="preview-section">
+            <h2>公告</h2>
+            <div id="previewTitle">预览标题</div>
+            <img id="previewImage" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=">
+            <div class="preview-content" id="previewContent"></div>
+            <div class="dynamic-elements"></div>
+            <div class="preview-notice">※ 此样式仅供参考，以当天预览为准 ※</div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('titleInput').addEventListener('input', function(e) {
+            document.getElementById('previewTitle').textContent = e.target.value.slice(0, 50);
+        });
+
+        const handleContentUpdate = () => {
+            const content = document.getElementById('contentInput').value;
+            const textError = document.getElementById('textError');
+            
+            const paragraphs = content.split('\n')
+                .map(p => p.trim())
+                .filter(p => p)
+                .map(p => {
+                    const chars = Array.from(p);
+                    const limited = chars.slice(0, 90).join('');
+                    return limited + (chars.length > 90 ? '...' : '');
+                });
+
+            const previewContent = document.getElementById('previewContent');
+            previewContent.innerHTML = paragraphs.map(p => 
+                `<div class="paragraph">${p}</div>`
+            ).join('');
+
+            const dynamicContainer = document.querySelector('.dynamic-elements');
+            dynamicContainer.innerHTML = `
+                <div class="divider"></div>
+                <a href="#" class="detail-link">查看详情 ></a>
+            `;
+
+            textError.style.display = content.split('\n').some(p => Array.from(p).length > 90) ? 'block' : 'none';
+        };
+
+        document.getElementById('contentInput').addEventListener('input', handleContentUpdate);
+
+        document.getElementById('imageUpload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const imgPreview = document.getElementById('previewImage');
+            const errorMsg = document.getElementById('imageError');
+
+            if (!file) return;
+
+            const validTypes = ['image/jpeg', 'image/png', 'image/gif'];
+            if (!validTypes.includes(file.type)) {
+                errorMsg.textContent = '仅支持JPG/PNG/GIF格式';
+                errorMsg.style.display = 'block';
+                e.target.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    if (img.naturalWidth === 750 && img.naturalHeight === 300) {
+                        imgPreview.src = e.target.result;
+                        errorMsg.style.display = 'none';
+                    } else {
+                        errorMsg.innerHTML = `尺寸不符！要求：750×300<br>当前尺寸：${img.naturalWidth}×${img.naturalHeight}`;
+                        errorMsg.style.display = 'block';
+                        e.target.value = '';
+                        imgPreview.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+                    }
+                }
+                img.src = e.target.result;
+            }
+            reader.readAsDataURL(file);
+        });
+    </script>
+</body>
+</html>
